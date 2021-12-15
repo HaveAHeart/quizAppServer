@@ -1,5 +1,4 @@
 import java.sql.SQLException
-import kotlin.math.log
 
 class Auth {
     private val conn = DB.connect()!!
@@ -8,10 +7,10 @@ class Auth {
         return try {
             conn.createStatement()
                 .execute("insert into testapp.users(login, passwordHash) values ('$login', '$pwdHash');")
-            print("user registered: ($login : $pwdHash)")
+            println("user registered: ($login : $pwdHash)")
             true
         } catch (e: SQLException) {
-            print("can not register user ($login : $pwdHash): nickname is already taken")
+            println(e.message)
             false
         }
     }

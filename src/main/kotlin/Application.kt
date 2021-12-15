@@ -17,11 +17,11 @@ fun Application.module() {
     install(Authentication) {
         jwt("auth-jws") {
             //other algos require more than one secret key
-            realm = "QuizApp"
             verifier(JWT.require(Algorithm.HMAC256("Here is the secret")).build())
             validate { jwtCredential ->
                 val login = jwtCredential.payload.getClaim("login").asString()
                 val pwdHash = jwtCredential.payload.getClaim("pwdHash").asString()
+                //TODO null check
                 AuthData(login, pwdHash)
             }
         }

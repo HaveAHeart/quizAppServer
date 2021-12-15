@@ -7,6 +7,7 @@ import models.*
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.auth.*
+import io.ktor.auth.jwt.*
 
 fun Application.registerRoutes() {
     routing {
@@ -90,8 +91,28 @@ fun Route.routedAPI() {
             post {
                 val test = call.receive<Test>()
                 conn.createStatement()
-                    .execute("insert into testapp.tests(name, desc) values('${test.name}', '${test.desc}')")
+                    .execute("insert into testapp.tests(name, desc) values('${test.name}', '${test.desc}');")
                 call.respondText("Test added correctly", status = HttpStatusCode.Created)
+            }
+            post("/sendAnswers"){
+                val answers = call.receive<Answers>()
+                val questionsSet = conn.createStatement()
+                    .executeQuery("select * from testapp.questions where testId='${answers.testId}' order by id;")
+                //todo: is testId correct
+                var resultSum = 0
+                for (i in 0..answers.answers.size) {
+                    questionsSet.next()
+                    val value = questionsSet.getInt(3)
+                    val correctAnswer = questionsSet.getString(9)
+                    if (correctAnswer == answers.answers[i]) {
+                        resultSum += value
+                    }
+                }
+                val principal = call.principal<JWTPrincipal>()
+                val login = principal!!.payload.getClaim("login").asString()
+                conn.createStatement()
+                    .execute("update testapp.users set lastTestId='${answers.testId}', lastResult='$resultSum' where login='$login';")
+                call.respond(AnswersResult(resultSum))
             }
         }
 
@@ -103,7 +124,7 @@ fun Route.routedAPI() {
                 )
                 val testIdIn = testIdInStr.toInt()
                 val resSet = conn.createStatement()
-                    .executeQuery("select * from testapp.questions where testId='$testIdIn'")
+                    .executeQuery("select * from testapp.questions where testId='$testIdIn' order by id;")
                 val questions = mutableListOf<Question>()
                 while (resSet.next()) {
                     val id = resSet.getInt(1)
@@ -123,12 +144,17 @@ fun Route.routedAPI() {
             }
             post {
                 val q = call.receive<Question>()
-                conn.createStatement()
+                val res = conn.createStatement()
                     .execute(
                         "insert into testapp.tests(testId, value, var1, var2, var3, var4, answer) " +
                                 "values('${q.testId}', '${q.value}', '${q.var1}', '${q.var2}', '${q.var3}', '${q.var4}', '${q.answer}')"
                     )
-                call.respondText("Question added correctly", status = HttpStatusCode.Created)
+                if (res) {
+                    call.respondText("Question added correctly", status = HttpStatusCode.Created)
+                }
+                else {
+                    call.respondText("Error while adding the question", status = HttpStatusCode.BadRequest)
+                }
             }
         }
 
