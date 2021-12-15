@@ -4,7 +4,6 @@ import io.ktor.application.*
 import io.ktor.auth.*
 import io.ktor.auth.jwt.*
 import io.ktor.features.*
-import io.ktor.routing.*
 import io.ktor.serialization.*
 import models.AuthData
 
